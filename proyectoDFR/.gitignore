@@ -10,8 +10,8 @@ wheels/
 .venv
 
 # Databases
-#*.sql
-#*.sqlite3
+*.sql
+*.sqlite3
 
 # Secrets
 #.env
