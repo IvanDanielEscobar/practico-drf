@@ -25,12 +25,12 @@ class OrdenSerializer(serializers.ModelSerializer):
             "cliente",
             "clienteNombre",
             "tecnico",
-            "tecnicoNombre"
+            "tecnicoNombre",
             "direccion",
             "altura",
             "tarea",
-            "descripcion"
+            "descripcion",
             "timestamp",
         ]
 
-        read_only_fields = ["id", "timestamp"],
+        read_only_fields = ["id", "timestamp"]

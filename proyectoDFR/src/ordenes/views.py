@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
-from django.decorators import api_view
-from django.response import Response
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from rest_framework import status
 from .models import Orden, Cliente, Tecnico
 from .serializers import OrdenSerializer,ClienteSerializer,TecnicoSerializer
@@ -46,7 +46,7 @@ def ordenDetail(request, pk):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTPS_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         orden.delete()
