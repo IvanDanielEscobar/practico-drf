@@ -45,3 +45,17 @@ class Orden(models.Model):
 
     def __str__(self):
         return f"Orden #{self.numeroOrden} - {self.cliente.nombre}"
+
+
+class DetalleOrden(models.Model):
+    orden = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name='detalles')
+    descripcion = models.CharField(max_length=200)
+    cantidad = models.PositiveIntegerField(default=1)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    @property
+    def subtotal(self):
+        return self.cantidad * self.precio_unitario
+
+    def __str__(self):
+        return f"{self.descripcion} (x{self.cantidad}) - Orden #{self.orden.numeroOrden}"
