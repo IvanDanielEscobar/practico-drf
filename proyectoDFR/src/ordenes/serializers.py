@@ -49,6 +49,7 @@ class OrdenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Orden
         fields = [
+<<<<<<< HEAD
             'id',
             'numeroOrden',
             'cliente',
@@ -63,9 +64,23 @@ class OrdenSerializer(serializers.ModelSerializer):
             'detalles',
             'timestamp',
             'updateTimestamp',
+=======
+            "id",
+            "numeroOrden",
+            "cliente",
+            "clienteNombre",
+            "tecnico",
+            "tecnicoNombre",
+            "direccion",
+            "altura",
+            "tarea",
+            "descripcion",
+            "timestamp",
+>>>>>>> 157d3084cfe88b5cb379661f2ca16a07360c4cd2
         ]
         read_only_fields = ['id', 'timestamp', 'updateTimestamp']
 
+<<<<<<< HEAD
     def create(self, validated_data):
         detalles_data = validated_data.pop('detalles', [])
         orden = Orden.objects.create(**validated_data)
@@ -93,3 +108,6 @@ class ClienteDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
         fields = ['id', 'nombre', 'telefono', 'email', 'ordenes']
+=======
+        read_only_fields = ["id", "timestamp"]
+>>>>>>> 157d3084cfe88b5cb379661f2ca16a07360c4cd2

@@ -1,0 +1,158 @@
+### Variables de entorno
+@baseUrl = http://127.0.0.1:8000/api
+
+### ====================================================================
+### 1. CLIENTES
+### ====================================================================
+
+### Listar Clientes
+GET {{baseUrl}}/clientes/
+Accept: application/json
+
+### Crear Cliente
+POST {{baseUrl}}/clientes/
+Content-Type: application/json
+
+{
+  "nombre": "Empresa Alfa S.A.",
+  "telefono": "3514001122",
+  "email": "contacto@empresaalfa.com"
+}
+
+### Ver Detalle de Cliente (con sus órdenes asociadas)
+GET {{baseUrl}}/clientes/1/
+Accept: application/json
+
+
+### ====================================================================
+### 2. TÉCNICOS
+### ====================================================================
+
+### Listar Técnicos
+GET {{baseUrl}}/tecnicos/
+Accept: application/json
+
+### Crear Técnico
+POST {{baseUrl}}/tecnicos/
+Content-Type: application/json
+
+{
+  "nombre": "Lucas Gomez",
+  "categoria": "INSTALACIONES",
+  "activo": true
+}
+
+### Ver Detalle de Técnico
+GET {{baseUrl}}/tecnicos/1/
+Accept: application/json
+
+
+### ====================================================================
+### 3. ÓRDENES (Con Serializers Anidados)
+### ====================================================================
+
+### Listar Órdenes (Incluye Cliente, Técnico y Detalles anidados)
+GET {{baseUrl}}/ordenes/
+Accept: application/json
+
+### Crear Orden con Detalles Anidados
+POST {{baseUrl}}/ordenes/
+Content-Type: application/json
+
+{
+  "numeroOrden": 2001,
+  "cliente_id": 1,
+  "tecnico_id": 1,
+  "direccion": "Bv. Chacabuco",
+  "altura": 450,
+  "tarea": "Instalación de fibra óptica y configuración de switch",
+  "descripcion": "Instalación en oficina principal piso 3",
+  "estado": "PENDIENTE",
+  "detalles": [
+    {
+      "descripcion": "Switch Gigabit 24 Puertos",
+      "cantidad": 1,
+      "precio_unitario": "185000.00"
+    },
+    {
+      "descripcion": "Patchcord UTP 2m",
+      "cantidad": 10,
+      "precio_unitario": "3500.00"
+    },
+    {
+      "descripcion": "Mano de obra especializada",
+      "cantidad": 4,
+      "precio_unitario": "15000.00"
+    }
+  ]
+}
+
+### Ver Detalle de Orden (ID 1)
+GET {{baseUrl}}/ordenes/1/
+Accept: application/json
+
+### Actualizar Orden Completa (PUT)
+PUT {{baseUrl}}/ordenes/1/
+Content-Type: application/json
+
+{
+  "numeroOrden": 2001,
+  "cliente_id": 1,
+  "tecnico_id": 1,
+  "direccion": "Bv. Chacabuco",
+  "altura": 450,
+  "tarea": "Instalación de fibra óptica finalizada",
+  "descripcion": "Se completó la instalación y se probaron los enlaces",
+  "estado": "COMPLETADA",
+  "detalles": [
+    {
+      "descripcion": "Switch Gigabit 24 Puertos",
+      "cantidad": 1,
+      "precio_unitario": "185000.00"
+    },
+    {
+      "descripcion": "Patchcord UTP 2m",
+      "cantidad": 12,
+      "precio_unitario": "3500.00"
+    }
+  ]
+}
+
+### Actualización Parcial de Estado (PATCH)
+PATCH {{baseUrl}}/ordenes/1/
+Content-Type: application/json
+
+{
+  "estado": "EN_PROCESO"
+}
+
+### Eliminar Orden (DELETE)
+DELETE {{baseUrl}}/ordenes/1/
+
+
+### ====================================================================
+### 4. DETALLES DE ÓRDENES (Endpoints individuales)
+### ====================================================================
+
+### Listar todos los detalles de órdenes
+GET {{baseUrl}}/detalles/
+Accept: application/json
+
+### Crear un detalle puntual asignado a una orden existente
+POST {{baseUrl}}/detalles/
+Content-Type: application/json
+
+{
+  "orden": 1,
+  "descripcion": "Conectores RJ45 (Pack x10)",
+  "cantidad": 2,
+  "precio_unitario": "4500.00"
+}
+
+### Ver Detalle individual
+GET {{baseUrl}}/detalles/1/
+Accept: application/json
+
+### Eliminar Detalle puntual
+DELETE {{baseUrl}}/detalles/1/
+
