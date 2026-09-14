@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from rest_framework import generics
 from .models import Orden, Cliente, Tecnico, DetalleOrden
 from .serializers import (
@@ -8,14 +7,6 @@ from .serializers import (
     TecnicoSerializer,
     DetalleOrdenSerializer
 )
-=======
-from django.shortcuts import render, get_object_or_404
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .models import Orden, Cliente, Tecnico
-from .serializers import OrdenSerializer,ClienteSerializer,TecnicoSerializer
->>>>>>> 157d3084cfe88b5cb379661f2ca16a07360c4cd2
 
 
 # =====================================================================
@@ -37,27 +28,8 @@ class OrdenDetailView(generics.RetrieveUpdateDestroyAPIView):
     PUT/PATCH: Actualización completa o parcial de la orden y sus detalles.
     DELETE: Eliminación de la orden.
     """
-<<<<<<< HEAD
     queryset = Orden.objects.all().select_related('cliente', 'tecnico').prefetch_related('detalles')
     serializer_class = OrdenSerializer
-=======
-    orden = get_object_or_404(Orden, pk=pk)
-
-    if request.method == 'GET':
-        serializer = OrdenSerializer(orden)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    elif request.method == 'PUT':
-        serializer = OrdenSerializer(orden, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        orden.delete()
-        return Response({'mensaje': f'Orden #{orden.numeroOrden} eliminada'}, status=status.HTTP_204_NO_CONTENT)
->>>>>>> 157d3084cfe88b5cb379661f2ca16a07360c4cd2
 
 
 class ClienteListCreateView(generics.ListCreateAPIView):
