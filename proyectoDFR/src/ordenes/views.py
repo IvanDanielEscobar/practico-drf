@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import viewsets, permissions
 from .models import Orden, Cliente, Tecnico, DetalleOrden
 from .serializers import (
     OrdenSerializer,
@@ -10,84 +10,57 @@ from .serializers import (
 
 
 # =====================================================================
-# Vistas Basadas en Clases (Concrete Generic Views) para CRUD
+# ViewSets (ModelViewSet y ReadOnlyModelViewSet)
 # =====================================================================
 
-class OrdenListCreateView(generics.ListCreateAPIView):
+class OrdenViewSet(viewsets.ModelViewSet):
     """
-    GET: Lista todas las órdenes con clientes, técnicos y detalles anidados.
-    POST: Crea una orden nueva, permitiendo asignar cliente, técnico y detalles.
-    """
-    queryset = Orden.objects.all().select_related('cliente', 'tecnico').prefetch_related('detalles')
-    serializer_class = OrdenSerializer
-
-
-class OrdenDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET: Detalle de una orden específica con sus relaciones anidadas.
-    PUT/PATCH: Actualización completa o parcial de la orden y sus detalles.
-    DELETE: Eliminación de la orden.
+    ViewSet para CRUD completo de órdenes.
+    - GET /api/ordenes/: Listado con datos anidados.
+    - POST /api/ordenes/: Creación con detalles anidados.
+    - GET /api/ordenes/{id}/: Detalle específico.
+    - PUT / PATCH / DELETE /api/ordenes/{id}/: Modificación y borrado.
+    Seguridad: Lectura abierta / Modificaciones solo para usuarios autenticados (JWT).
     """
     queryset = Orden.objects.all().select_related('cliente', 'tecnico').prefetch_related('detalles')
     serializer_class = OrdenSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-class ClienteListCreateView(generics.ListCreateAPIView):
+class ClienteViewSet(viewsets.ModelViewSet):
     """
-    GET: Lista todos los clientes registrados.
-    POST: Crea un nuevo cliente.
-    """
-    queryset = Cliente.objects.all()
-    serializer_class = ClienteSerializer
-
-
-class ClienteDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET: Detalle de un cliente incluyendo sus órdenes asociadas.
-    PUT/PATCH: Actualización del cliente.
-    DELETE: Eliminación del cliente.
+    ViewSet para CRUD completo de clientes.
+    - Usa ClienteDetailSerializer en 'retrieve' para mostrar órdenes anidadas.
+    - Usa ClienteSerializer en el resto de acciones.
+    Seguridad: Lectura abierta / Modificaciones solo para usuarios autenticados (JWT).
     """
     queryset = Cliente.objects.all().prefetch_related('ordenes')
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_serializer_class(self):
-        if self.request.method == 'GET':
+        if self.action == 'retrieve':
             return ClienteDetailSerializer
         return ClienteSerializer
 
 
-class TecnicoListCreateView(generics.ListCreateAPIView):
+class TecnicoViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    GET: Lista de técnicos.
-    POST: Crear un nuevo técnico.
-    """
-    queryset = Tecnico.objects.all()
-    serializer_class = TecnicoSerializer
-
-
-class TecnicoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET: Detalle del técnico.
-    PUT/PATCH: Actualización de datos del técnico.
-    DELETE: Eliminación del técnico.
+    ReadOnlyModelViewSet para técnicos.
+    Solo permite operaciones de lectura:
+    - GET /api/tecnicos/ (list)
+    - GET /api/tecnicos/{id}/ (retrieve)
+    Bloquea automáticamente POST, PUT, PATCH y DELETE.
     """
     queryset = Tecnico.objects.all()
     serializer_class = TecnicoSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-class DetalleOrdenListCreateView(generics.ListCreateAPIView):
+class DetalleOrdenViewSet(viewsets.ModelViewSet):
     """
-    GET: Lista todos los ítems/detalles de órdenes.
-    POST: Crear un ítem/detalle de orden directamente.
-    """
-    queryset = DetalleOrden.objects.all().select_related('orden')
-    serializer_class = DetalleOrdenSerializer
-
-
-class DetalleOrdenDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET: Obtiene un detalle puntual.
-    PUT/PATCH: Modifica un detalle puntual.
-    DELETE: Elimina un detalle puntual.
+    ViewSet para operaciones directas sobre ítems o detalles de órdenes.
+    Seguridad: Lectura abierta / Modificaciones solo para usuarios autenticados (JWT).
     """
     queryset = DetalleOrden.objects.all().select_related('orden')
     serializer_class = DetalleOrdenSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
