@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -6,6 +7,22 @@ from .models import Cliente, Tecnico, Orden, DetalleOrden
 
 class OrdenesAPITests(APITestCase):
     def setUp(self):
+        # 1. Crear usuario de prueba y autenticar mediante JWT (SimpleJWT)
+        self.user = User.objects.create_user(
+            username="testuser",
+            password="testpassword123"
+        )
+        token_url = reverse('token_obtain_pair')
+        token_response = self.client.post(
+            token_url,
+            {"username": "testuser", "password": "testpassword123"},
+            format='json'
+        )
+        self.assertEqual(token_response.status_code, status.HTTP_200_OK)
+        self.access_token = token_response.data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+        # 2. Datos iniciales
         self.cliente = Cliente.objects.create(
             nombre="Juan Perez",
             telefono="3511234567",
@@ -17,8 +34,54 @@ class OrdenesAPITests(APITestCase):
             activo=True
         )
 
+    # -------------------------------------------------------------
+    # Tests de Seguridad y Autenticación JWT (Práctico 3)
+    # -------------------------------------------------------------
+    def test_obtener_token_jwt(self):
+        """Verifica que el endpoint /api/token/ devuelva tokens access y refresh."""
+        url = reverse('token_obtain_pair')
+        response = self.client.post(url, {
+            "username": "testuser",
+            "password": "testpassword123"
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
+    def test_seguridad_escritura_sin_token_rechazada(self):
+        """Verifica que intentar crear recursos sin token devuelva 401 Unauthorized."""
+        # Desautenticar temporalmente al cliente
+        self.client.credentials()
+
+        url = reverse('cliente-list')
+        data = {
+            "nombre": "Anonimo",
+            "telefono": "000000000",
+            "email": "anonimo@example.com"
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_tecnico_readonly_model_viewset(self):
+        """
+        Verifica que TecnicoViewSet (ReadOnlyModelViewSet) permita lectura (GET 200)
+        y bloquee la creación con 405 Method Not Allowed.
+        """
+        # Lectura permitida
+        url_list = reverse('tecnico-list')
+        response_get = self.client.get(url_list)
+        self.assertEqual(response_get.status_code, status.HTTP_200_OK)
+
+        # Escritura bloqueada
+        data = {"nombre": "Nuevo Tecnico", "categoria": "INSTALACIONES", "activo": True}
+        response_post = self.client.post(url_list, data, format='json')
+        self.assertEqual(response_post.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    # -------------------------------------------------------------
+    # Tests de CRUD y Serializers Anidados (con Router y ModelViewSet)
+    # -------------------------------------------------------------
     def test_crear_cliente(self):
-        url = reverse('cliente-list-create')
+        url = reverse('cliente-list')
         data = {
             "nombre": "Ana Martinez",
             "telefono": "3517654321",
@@ -29,7 +92,7 @@ class OrdenesAPITests(APITestCase):
         self.assertEqual(Cliente.objects.count(), 2)
 
     def test_crear_orden_con_detalles_anidados(self):
-        url = reverse('orden-list-create')
+        url = reverse('orden-list')
         data = {
             "numeroOrden": 1001,
             "cliente_id": self.cliente.id,

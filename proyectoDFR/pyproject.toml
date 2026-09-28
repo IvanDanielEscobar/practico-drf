@@ -4,12 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "IvanEscobar", email = "ivanescobar.tfr@gmail.com" }
+    { name = "IvanEscobar", email = "ivanescobar.tfr@gmail.com" },
+    { name = "MatiasIbarra", email = "m.ibarra@itecriocuarto.org.ar" },
 ]
 requires-python = ">=3.12"
 dependencies = [
     "django>=6.1",
     "djangorestframework>=3.18.0",
+    "djangorestframework-simplejwt>=5.3.0",
 ]
 
 [project.scripts]

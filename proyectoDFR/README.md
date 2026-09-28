@@ -1,11 +1,17 @@
-# Práctico 2 - Django REST Framework (DRF)
+# Práctico 3 - Django REST Framework (DRF)
 
 API REST desarrollada con Django y Django REST Framework para la gestión de órdenes de trabajo, clientes, técnicos y detalles de servicio.
 
-En esta segunda entrega se incorporaron:
-1. **Nuevo Modelo Relacionado**: `DetalleOrden`, con relación `ForeignKey` a `Orden`.
-2. **Serializers Anidados (Nested Serializers)**: Serialización completa de `Cliente`, `Tecnico` y la lista de `DetalleOrden` dentro de cada `Orden` (lectura y creación/edición anidada).
-3. **Vistas Basadas en Clases (CBV)**: Migración de las vistas previas a *Concrete Generic Views* (`generics.ListCreateAPIView` y `generics.RetrieveUpdateDestroyAPIView`) de DRF.
+En esta tercera entrega se incorporaron:
+1. **ViewSets**: Reemplazo de vistas *Concrete Generics* por ViewSets:
+   - `OrdenViewSet`, `ClienteViewSet`, `DetalleOrdenViewSet` implementando `viewsets.ModelViewSet` (CRUD completo).
+   - `TecnicoViewSet` implementando `viewsets.ReadOnlyModelViewSet` (solo lectura: `list` y `retrieve`, bloqueando escritura).
+2. **Enrutamiento centralizado en `routers.py`**: Uso de `DefaultRouter` de DRF para generar y gestionar automáticamente los patrones de URL RESTful.
+3. **Seguridad y Permisos (`permission_classes`)**: Configuración de `IsAuthenticatedOrReadOnly` en los ViewSets (lectura pública permitida, escritura restringida a usuarios autenticados).
+4. **Autenticación con JWT (`djangorestframework-simplejwt`)**:
+   - Endpoints `/api/token/` (login para obtener par de tokens access/refresh) y `/api/token/refresh/`.
+   - Autenticación mediante cabecera HTTP: `Authorization: Bearer <access_token>`.
+   - Soporte opcional de autenticación por sesión (`SessionAuthentication`) en `/api-auth/` para la interfaz navegable (Browsable API).
 
 ---
 
@@ -35,9 +41,10 @@ uv sync
 uv run python src/manage.py migrate
 ```
 
-### 4. Ejecutar tests automatizados
+### 4. Crear un usuario para obtener tokens JWT
+Para probar la autenticación y realizar operaciones de escritura (POST, PUT, DELETE), crea un superusuario o usuario:
 ```bash
-uv run python src/manage.py test ordenes
+uv run python src/manage.py createsuperuser
 ```
 
 ### 5. Iniciar el servidor de desarrollo
@@ -48,98 +55,60 @@ El servidor estará accesible en `http://127.0.0.1:8000/`.
 
 ---
 
+## 🔐 Autenticación y Seguridad
+
+### 1. Obtener Token JWT
+Envía una petición `POST /api/token/` con las credenciales:
+```json
+{
+  "username": "tu_usuario",
+  "password": "tu_password"
+}
+```
+Respuesta:
+```json
+{
+  "refresh": "eyJhbGciOi...",
+  "access": "eyJhbGciOi..."
+}
+```
+
+### 2. Usar el Token en Peticiones Protegidas
+Para crear, editar o eliminar recursos, incluye la cabecera:
+```http
+Authorization: Bearer <access_token>
+```
+Si la petición no incluye el token o es inválido, la API responderá con `401 Unauthorized`.
+
+---
+
 ## 📌 Endpoints de la API
 
 La URL base es `http://127.0.0.1:8000/api/`.
 
-| Método | Endpoint | Descripción |
-| :--- | :--- | :--- |
-| **GET** / **POST** | `/api/ordenes/` | Listar órdenes (con datos anidados) / Crear orden (soporta items anidados) |
-| **GET** / **PUT** / **PATCH** / **DELETE** | `/api/ordenes/<id>/` | Ver detalle, actualizar o eliminar una orden |
-| **GET** / **POST** | `/api/clientes/` | Listar y crear clientes |
-| **GET** / **PUT** / **PATCH** / **DELETE** | `/api/clientes/<id>/` | Ver detalle (incluye sus órdenes), editar o borrar cliente |
-| **GET** / **POST** | `/api/tecnicos/` | Listar y crear técnicos |
-| **GET** / **PUT** / **PATCH** / **DELETE** | `/api/tecnicos/<id>/` | Ver detalle, editar o borrar técnico |
-| **GET** / **POST** | `/api/detalles/` | Listar y crear detalles de órdenes directamente |
-| **GET** / **PUT** / **PATCH** / **DELETE** | `/api/detalles/<id>/` | Ver detalle, editar o borrar un ítem individual |
+### Autenticación JWT
+-| Método | Endpoint | Descripción |
+-| **POST** | `/api/token/` | Obtener token de acceso y refresh (Login) |
+-| **POST** | `/api/token/refresh/` | Renovar token de acceso expirado |
 
----
-
-## 📦 Ejemplo de Creación con Serializers Anidados
-
-Petición `POST /api/ordenes/`:
-```json
-{
-  "numeroOrden": 2001,
-  "cliente_id": 1,
-  "tecnico_id": 1,
-  "direccion": "Bv. Chacabuco",
-  "altura": 450,
-  "tarea": "Instalación de fibra óptica y switches",
-  "descripcion": "Instalación en planta alta",
-  "estado": "PENDIENTE",
-  "detalles": [
-    {
-      "descripcion": "Switch Gigabit 24 Puertos",
-      "cantidad": 1,
-      "precio_unitario": "185000.00"
-    },
-    {
-      "descripcion": "Patchcord UTP 2m",
-      "cantidad": 10,
-      "precio_unitario": "3500.00"
-    }
-  ]
-}
-```
-
-Respuesta `201 Created` recibida (con relaciones y subtotales calculados):
-```json
-{
-  "id": 1,
-  "numeroOrden": 2001,
-  "cliente": {
-    "id": 1,
-    "nombre": "Empresa Alfa S.A.",
-    "telefono": "3514001122",
-    "email": "contacto@empresaalfa.com"
-  },
-  "tecnico": {
-    "id": 1,
-    "nombre": "Lucas Gomez",
-    "categoria": "INSTALACIONES",
-    "activo": true
-  },
-  "direccion": "Bv. Chacabuco",
-  "altura": 450,
-  "tarea": "Instalación de fibra óptica y switches",
-  "descripcion": "Instalación en planta alta",
-  "estado": "PENDIENTE",
-  "detalles": [
-    {
-      "id": 1,
-      "descripcion": "Switch Gigabit 24 Puertos",
-      "cantidad": 1,
-      "precio_unitario": "185000.00",
-      "subtotal": "185000.00"
-    },
-    {
-      "id": 2,
-      "descripcion": "Patchcord UTP 2m",
-      "cantidad": 10,
-      "precio_unitario": "3500.00",
-      "subtotal": "35000.00"
-    }
-  ],
-  "timestamp": "2026-09-14T14:30:00Z",
-  "updateTimestamp": "2026-09-14T14:30:00Z"
-}
-```
+### Recursos gestionados por `routers.py`
+-| Tipo de ViewSet | Método | Endpoint | Descripción | Permisos |
+-| **ModelViewSet** | **GET** / **POST** | `/api/ordenes/` | Listar órdenes / Crear orden con detalles anidados | GET: Público / POST: Auth |
+-| **ModelViewSet** | **GET** / **PUT** / **PATCH** / **DELETE** | `/api/ordenes/<id>/` | Ver detalle / Editar / Borrar orden | GET: Público / PUT, DELETE: Auth |
+-| **ModelViewSet** | **GET** / **POST** | `/api/clientes/` | Listar y crear clientes | GET: Público / POST: Auth |
+-| **ModelViewSet** | **GET** / **PUT** / **PATCH** / **DELETE** | `/api/clientes/<id>/` | Ver detalle (con órdenes) / Editar / Borrar | GET: Público / PUT, DELETE: Auth |
+-| **ReadOnlyModelViewSet** | **GET** | `/api/tecnicos/` | Listado de técnicos catálogo | Público |
+-| **ReadOnlyModelViewSet** | **GET** | `/api/tecnicos/<id>/` | Detalle del técnico | Público (POST/PUT/DELETE bloqueados: 405) |
+-| **ModelViewSet** | **GET** / **POST** | `/api/detalles/` | Listar / Crear detalles de órdenes | GET: Público / POST: Auth |
+-| **ModelViewSet** | **GET** / **PUT** / **PATCH** / **DELETE** | `/api/detalles/<id>/` | Ver / Editar / Borrar detalle puntual | GET: Público / PUT, DELETE: Auth |
 
 ---
 
 ## 🧪 Pruebas con Clientes REST (Postman, Bruno, Thunder Client)
 
 El repositorio incluye el archivo [`requests.http`](requests.http) con todas las peticiones listas para enviar:
-- En **VS Code**: Instalar la extensión **Thunder Client** o **REST Client** y ejecutar directamente desde el archivo `requests.http`.
-- En **Postman / Bruno**: Puedes importar el archivo `requests.http` o copiar los payloads y endpoints documentados arriba.
+1. **Paso 1**: Ejecuta la petición `0.1 Obtener Token` enviando tus credenciales de usuario.
+2. **Paso 2**: Realiza peticiones de lectura sin token para validar que responde `200 OK`.
+3. **Paso 3**: Prueba enviar un `POST` sin token para comprobar que el sistema de permisos responde `401 Unauthorized`.
+4. **Paso 4**: Realiza peticiones de creación y edición enviando la cabecera `Authorization: Bearer {{accessToken}}` para comprobar el éxito (`201 Created` / `200 OK`).
+5. **Paso 5**: Prueba enviar un `POST` a `/api/tecnicos/` para comprobar que `ReadOnlyModelViewSet` devuelve `405 Method Not Allowed`.

@@ -2,87 +2,147 @@
 @baseUrl = http://127.0.0.1:8000/api
 
 ### ====================================================================
-### 1. CLIENTES
+### 0. AUTENTICACIÓN JWT (SimpleJWT)
 ### ====================================================================
 
-### Listar Clientes
-GET {{baseUrl}}/clientes/
+### 0.1 Obtener Token de Acceso y Refresh (Login)
+# (podes crear un usuaio con: uv run python src/manage.py createsuperuser)
+# @name login
+POST {{baseUrl}}/token/
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "adminpassword123"
+}
+
+### Guardar el token devuelto en la variable para usarlo en las siguientes peticiones
+@accessToken = {{login.response.body.access}}
+@refreshToken = {{login.response.body.refresh}}
+
+### 0.2 Refrescar Token de Acceso
+POST {{baseUrl}}/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{{refreshToken}}"
+}
+
+
+### ====================================================================
+### 1. DEMOSTRACIÓN DE SEGURIDAD Y PERMISOS (permission_classes)
+### ====================================================================
+
+### 1.1 Lectura pública permitida sin token (200 OK)
+GET {{baseUrl}}/ordenes/
 Accept: application/json
 
-### Crear Cliente
+### 1.2 Intento de creación sin token (Debe responder 401 Unauthorized)
 POST {{baseUrl}}/clientes/
 Content-Type: application/json
 
 {
-  "nombre": "Empresa Alfa S.A.",
-  "telefono": "3514001122",
-  "email": "contacto@empresaalfa.com"
+  "nombre": "Cliente Sin Token",
+  "telefono": "3510000000",
+  "email": "sin.token@example.com"
 }
 
-### Ver Detalle de Cliente (con sus órdenes asociadas)
-GET {{baseUrl}}/clientes/1/
-Accept: application/json
-
 
 ### ====================================================================
-### 2. TÉCNICOS
+### 2. CLIENTES (ModelViewSet)
 ### ====================================================================
 
-### Listar Técnicos
-GET {{baseUrl}}/tecnicos/
+### Listar Clientes (Lectura pública)
+GET {{baseUrl}}/clientes/
 Accept: application/json
 
-### Crear Técnico
-POST {{baseUrl}}/tecnicos/
+### Crear Cliente (Requiere Autenticación Bearer)
+POST {{baseUrl}}/clientes/
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "nombre": "Lucas Gomez",
+  "nombre": "Empresa Beta S.A.",
+  "telefono": "3514001122",
+  "email": "contacto@empresabeta.com"
+}
+
+### Ver Detalle de Cliente con órdenes anidadas (Lectura pública)
+GET {{baseUrl}}/clientes/1/
+Accept: application/json
+
+### Modificar Cliente (Requiere Autenticación Bearer)
+PUT {{baseUrl}}/clientes/1/
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "nombre": "Empresa Beta Modificada",
+  "telefono": "3519999999",
+  "email": "contacto@empresabeta.com"
+}
+
+### Eliminar Cliente (Requiere Autenticación Bearer)
+DELETE {{baseUrl}}/clientes/1/
+Authorization: Bearer {{accessToken}}
+
+
+### ====================================================================
+### 3. TÉCNICOS (ReadOnlyModelViewSet)
+### ====================================================================
+
+### Listar Técnicos (Lectura permitida)
+GET {{baseUrl}}/tecnicos/
+Accept: application/json
+
+### Ver Detalle de Técnico (Lectura permitida)
+GET {{baseUrl}}/tecnicos/1/
+Accept: application/json
+
+### Intento de Crear Técnico (Debe responder 405 Method Not Allowed porque es ReadOnlyModelViewSet)
+POST {{baseUrl}}/tecnicos/
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "nombre": "Juan Instalador",
   "categoria": "INSTALACIONES",
   "activo": true
 }
 
-### Ver Detalle de Técnico
-GET {{baseUrl}}/tecnicos/1/
-Accept: application/json
-
 
 ### ====================================================================
-### 3. ÓRDENES (Con Serializers Anidados)
+### 4. ÓRDENES (ModelViewSet con Serializers Anidados)
 ### ====================================================================
 
 ### Listar Órdenes (Incluye Cliente, Técnico y Detalles anidados)
 GET {{baseUrl}}/ordenes/
 Accept: application/json
 
-### Crear Orden con Detalles Anidados
+### Crear Orden con Detalles Anidados (Requiere Autenticación Bearer)
 POST {{baseUrl}}/ordenes/
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "numeroOrden": 2001,
+  "numeroOrden": 3001,
   "cliente_id": 1,
   "tecnico_id": 1,
-  "direccion": "Bv. Chacabuco",
-  "altura": 450,
-  "tarea": "Instalación de fibra óptica y configuración de switch",
-  "descripcion": "Instalación en oficina principal piso 3",
+  "direccion": "Av. General Paz",
+  "altura": 820,
+  "tarea": "Configuración de Servidor y Firewall",
+  "descripcion": "Instalación en rack principal",
   "estado": "PENDIENTE",
   "detalles": [
     {
-      "descripcion": "Switch Gigabit 24 Puertos",
+      "descripcion": "Servidor Dell PowerEdge",
       "cantidad": 1,
-      "precio_unitario": "185000.00"
+      "precio_unitario": "1500000.00"
     },
     {
-      "descripcion": "Patchcord UTP 2m",
-      "cantidad": 10,
-      "precio_unitario": "3500.00"
-    },
-    {
-      "descripcion": "Mano de obra especializada",
-      "cantidad": 4,
-      "precio_unitario": "15000.00"
+      "descripcion": "Módulo SFP+ 10Gbps",
+      "cantidad": 2,
+      "precio_unitario": "45000.00"
     }
   ]
 }
@@ -91,68 +151,63 @@ Content-Type: application/json
 GET {{baseUrl}}/ordenes/1/
 Accept: application/json
 
-### Actualizar Orden Completa (PUT)
+### Actualizar Orden Completa (PUT con autenticación)
 PUT {{baseUrl}}/ordenes/1/
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "numeroOrden": 2001,
+  "numeroOrden": 3001,
   "cliente_id": 1,
   "tecnico_id": 1,
-  "direccion": "Bv. Chacabuco",
-  "altura": 450,
-  "tarea": "Instalación de fibra óptica finalizada",
-  "descripcion": "Se completó la instalación y se probaron los enlaces",
+  "direccion": "Av. General Paz",
+  "altura": 820,
+  "tarea": "Servidor y Firewall Configurado y Operativo",
+  "descripcion": "Entrega y puesta en marcha realizada",
   "estado": "COMPLETADA",
   "detalles": [
     {
-      "descripcion": "Switch Gigabit 24 Puertos",
+      "descripcion": "Servidor Dell PowerEdge",
       "cantidad": 1,
-      "precio_unitario": "185000.00"
-    },
-    {
-      "descripcion": "Patchcord UTP 2m",
-      "cantidad": 12,
-      "precio_unitario": "3500.00"
+      "precio_unitario": "1500000.00"
     }
   ]
 }
 
-### Actualización Parcial de Estado (PATCH)
+### Actualización Parcial de Estado (PATCH con autenticación)
 PATCH {{baseUrl}}/ordenes/1/
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
   "estado": "EN_PROCESO"
 }
 
-### Eliminar Orden (DELETE)
+### Eliminar Orden (DELETE con autenticación)
 DELETE {{baseUrl}}/ordenes/1/
+Authorization: Bearer {{accessToken}}
 
 
 ### ====================================================================
-### 4. DETALLES DE ÓRDENES (Endpoints individuales)
+### 5. DETALLES DE ÓRDENES (ModelViewSet)
 ### ====================================================================
 
 ### Listar todos los detalles de órdenes
 GET {{baseUrl}}/detalles/
 Accept: application/json
 
-### Crear un detalle puntual asignado a una orden existente
+### Crear un detalle individual asignado a una orden existente
 POST {{baseUrl}}/detalles/
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
   "orden": 1,
-  "descripcion": "Conectores RJ45 (Pack x10)",
+  "descripcion": "Cable de poder interlock",
   "cantidad": 2,
-  "precio_unitario": "4500.00"
+  "precio_unitario": "8500.00"
 }
 
-### Ver Detalle individual
-GET {{baseUrl}}/detalles/1/
-Accept: application/json
-
-### Eliminar Detalle puntual
+### Eliminar Detalle individual
 DELETE {{baseUrl}}/detalles/1/
-
+Authorization: Bearer {{accessToken}}
